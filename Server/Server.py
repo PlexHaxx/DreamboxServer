@@ -72,23 +72,27 @@ class LiveManifestMonitor(cherrypy.process.plugins.Monitor):
 
 class Home():
 
-    def checkRequest(self):
+    def checkRequest():
 
-        if cherrypy.request.path_info:
+        if 'manifest.m3u8' in cherrypy.request.path_info:
             import time
-            time.sleep(12)
             cherrypy.log('request manifest. Sleeping')
+            time.sleep(8) \ 10 SECONDS SEEMS TO BE TOO LONG. GIVES A PLAYBACK ERROR ON ANDROID
 
-    def checkResponse(self):
 
-        if cherrypy.response.status == '404':
+    def checkResponse():
+        if cherrypy.response.status == 404:
             import time
-            time.sleep(10)
-            cherrypy.log('Sleeping')
+            cherrypy.log('Sleeping for segment')
+            # TODO DOes this have to sleep long enought so a few segments are created 3 x 2 = 6 seconds Seems to crash if it does too many 404s in an amount of time, not in a row
+            # TODO seems to work, added another second . Creates another 3 after a 404 without the one. MAY NNED ONE ON TO GIV E IT VHANCE TO VATCH UP. STUTTERED A BIT WHEN IT RAN OUT OF SEGMENTS
+            time.sleep(7)
+            #todo do a redirect of the original request
+
 
 
     cherrypy.tools.checkrequest = cherrypy.Tool('on_start_resource', checkRequest)
-    cherrypy.tools.checkresponse = cherrypy.Tool('on_start_resource', checkResponse)
+    cherrypy.tools.checkresponse = cherrypy.Tool('before_finalize', checkResponse)
 
 
 

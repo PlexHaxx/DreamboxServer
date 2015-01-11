@@ -77,17 +77,20 @@ class Home():
         if 'manifest.m3u8' in cherrypy.request.path_info:
             import time
             cherrypy.log('request manifest. Sleeping')
-            time.sleep(8) \ 10 SECONDS SEEMS TO BE TOO LONG. GIVES A PLAYBACK ERROR ON ANDROID
+            #time.sleep(9) # 10 SECONDS SEEMS TO BE TOO LONG. GIVES A PLAYBACK ERROR ON ANDROID
 
 
     def checkResponse():
         if cherrypy.response.status == 404:
+            raise cherrypy.HttpRedirect(cherrypy.request.path_info)
             import time
             cherrypy.log('Sleeping for segment')
             # TODO DOes this have to sleep long enought so a few segments are created 3 x 2 = 6 seconds Seems to crash if it does too many 404s in an amount of time, not in a row
             # TODO seems to work, added another second . Creates another 3 after a 404 without the one. MAY NNED ONE ON TO GIV E IT VHANCE TO VATCH UP. STUTTERED A BIT WHEN IT RAN OUT OF SEGMENTS
-            time.sleep(7)
-            #todo do a redirect of the original request
+            time.sleep(14)
+            #TODO I SUPPOSE THE FIRST SLEEP NEEDS TO BE SHORTER THAN THE AMOUNT OF PREVIOUS SEGMENTS LOADED , SO 14 SECONDS FIRST, 6-7 SECOND AFTER
+            #todo do a redirect of the original request. YES NEED TO DO THIS AS ITS PLAYING THE ERROR
+            #TODO NEED TO SUBLASS TOOLS AND SET SLEEP DEPENDING ON MANIFEST WAIT OR SEGMENT . SO FIRST SEGMENT CAN WAIT ABOUT 10 AGAIN
 
 
 
@@ -97,3 +100,6 @@ class Home():
 
 
 cherrypy.quickstart(Home(), config='config.conf')
+"""
+ffmpeg -i http://192.168.1.252:8001/1:0:1:1933:7FF:2:11A0000:0:0:0: -b:v 128k -force_key_frames 2  -f segment -segment_list_flags +live -segment_list live_manifest.m3u8 -segment_time 2 out%03d.ts
+"""

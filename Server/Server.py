@@ -69,28 +69,73 @@ class LiveManifestMonitor(cherrypy.process.plugins.Monitor):
 
         """
 
+class InternalRedirector(object):
+
+    """WSGI middleware that handles raised cherrypy.InternalRedirect."""
+
+    def __init__(self, nextapp, recursive=False):
+        self.nextapp = nextapp
+        self.recursive = recursive
+
+    def __call__(self, environ, start_response):
+        redirections = []
+        while True:
+            environ = environ.copy()
+            try:
+                return self.nextapp(environ, start_response)
+            except _cherrypy.InternalRedirect:
+                ir = _sys.exc_info()[1]
+                sn = environ.get('SCRIPT_NAME', '')
+                path = environ.get('PATH_INFO', '')
+                qs = environ.get('QUERY_STRING', '')
+
+                # Add the *previous* path_info + qs to redirections.
+                old_uri = sn + path
+                if qs:
+                    old_uri += "?" + qs
+                redirections.append(old_uri)
+
+                if not self.recursive:
+                    # Check to see if the new URI has been redirected to
+                    # already
+                    new_uri = sn + ir.path
+                    if ir.query_string:
+                        new_uri += "?" + ir.query_string
+                    if new_uri in redirections:
+                        ir.request.close()
+                        raise RuntimeError("InternalRedirector visited the "
+                                           "same URL twice: %r" % new_uri)
+
+                # Munge the environment and try again.
+                environ['REQUEST_METHOD'] = "GET"
+                environ['PATH_INFO'] = ir.path
+                environ['QUERY_STRING'] = ir.query_string
+                environ['wsgi.input'] = BytesIO()
+                environ['CONTENT_LENGTH'] = "0"
+                environ['cherrypy.previous_request'] = ir.request
+
 
 class Home():
 
+
+
     def checkRequest():
+        if cherrypy.request.prev is not None:
+            cherrypy.log(str(cherrypy.request.prev))
 
         if 'manifest.m3u8' in cherrypy.request.path_info:
             import time
             cherrypy.log('request manifest. Sleeping')
-            #time.sleep(9) # 10 SECONDS SEEMS TO BE TOO LONG. GIVES A PLAYBACK ERROR ON ANDROID
+            time.sleep(9.5) # 10 SECONDS SEEMS TO BE TOO LONG. GIVES A PLAYBACK ERROR ON ANDROID
 
 
     def checkResponse():
         if cherrypy.response.status == 404:
-            raise cherrypy.HttpRedirect(cherrypy.request.path_info)
-            import time
-            cherrypy.log('Sleeping for segment')
-            # TODO DOes this have to sleep long enought so a few segments are created 3 x 2 = 6 seconds Seems to crash if it does too many 404s in an amount of time, not in a row
-            # TODO seems to work, added another second . Creates another 3 after a 404 without the one. MAY NNED ONE ON TO GIV E IT VHANCE TO VATCH UP. STUTTERED A BIT WHEN IT RAN OUT OF SEGMENTS
-            time.sleep(14)
-            #TODO I SUPPOSE THE FIRST SLEEP NEEDS TO BE SHORTER THAN THE AMOUNT OF PREVIOUS SEGMENTS LOADED , SO 14 SECONDS FIRST, 6-7 SECOND AFTER
-            #todo do a redirect of the original request. YES NEED TO DO THIS AS ITS PLAYING THE ERROR
-            #TODO NEED TO SUBLASS TOOLS AND SET SLEEP DEPENDING ON MANIFEST WAIT OR SEGMENT . SO FIRST SEGMENT CAN WAIT ABOUT 10 AGAIN
+
+
+
+            raise cherrypy.HTTPRedirect(cherrypy.request.path_info)
+
 
 
 

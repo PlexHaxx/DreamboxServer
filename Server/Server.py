@@ -4,14 +4,16 @@ __author__ = 'marcgreenwood'
 import cherrypy
 import os
 from cherrypy.lib.static import serve_file
+from mako.template import Template
+from mako.lookup import TemplateLookup
 
 
 path = os.path.abspath(os.path.dirname(__file__))
 config = {
   'global' : {
-    'server.socket_host' : 'localhost',
+    'server.socket_host' : '127.0.0.1',
     'server.socket_port' : 9090,
-    'server.thread_pool' : 8
+    'server.thread_pool' : 10
   },
   '/bootstrap' : {
     'tools.staticdir.on'            : True,
@@ -24,15 +26,47 @@ config = {
   }
 }
 
+class Feeds():
+
+    @cherrypy.expose
+    def index(self):
+        return 'A list of feeds to select the correct audio channels. Do a call before returning to display the actual ones available'
+
+class Stream():
+
+    @cherrypy.expose
+    def audio1(self):
+
+        raise cherrypy.HTTPRedirect('http://localhost:28090/live_audio1.mkv')
+
+    @cherrypy.expose
+    def audio2(self):
+
+        raise cherrypy.HTTPRedirect('http://localhost:28090/live_audio2.mkv')
+
+
+class Bouquets():
+
+    @cherrypy.expose
+    def index(self):
+        #todo Some subscribe call here and elsewhere to put message on bus we have selected something and call appropriate plugin
+        mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
+        index = Template (filename=os.path.abspath('.') + '/html/bouquets.html', lookup=mylookup)
+        return index.render()
 
 class Home():
 
+    Feeds = Feeds()
+    Stream = Stream()
+    Bouquets = Bouquets()
 
 
     @cherrypy.expose
     def index(self):
         import os
-        return serve_file(os.path.abspath('.') + '/html/index.html')
+        mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
+        index = Template (filename=os.path.abspath('.') + '/html/index.html', lookup=mylookup)
+        return index.render()
 
 
 

@@ -29,8 +29,11 @@ config = {
 class Feeds():
 
     @cherrypy.expose
+    @cherrypy.tools.json_out()
     def index(self):
-        return 'A list of feeds to select the correct audio channels. Do a call before returning to display the actual ones available'
+
+        channels = [('audio1', 'http://localhost:28090/live_audio1.mkv'), ('audio1', 'http://localhost:28090/live_audio2.mkv' )]
+        return channels
 
 class Stream():
 
@@ -54,11 +57,61 @@ class Bouquets():
         index = Template (filename=os.path.abspath('.') + '/html/bouquets.html', lookup=mylookup)
         return index.render()
 
+class Dreambox():
+
+    @cherrypy.expose
+    def index(self):
+        #todo Some subscribe call here and elsewhere to put message on bus we have selected something and call appropriate plugin
+        mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
+        index = Template (filename=os.path.abspath('.') + '/html/dreambox.html', lookup=mylookup)
+        return index.render()
+
+class FFMPEG():
+
+    @cherrypy.expose
+    def index(self):
+        #todo Some subscribe call here and elsewhere to put message on bus we have selected something and call appropriate plugin
+        mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
+        index = Template (filename=os.path.abspath('.') + '/html/ffmpeg.html', lookup=mylookup)
+        return index.render()
+
+class FFServer():
+
+    @cherrypy.expose
+    def index(self):
+        #todo Some subscribe call here and elsewhere to put message on bus we have selected something and call appropriate plugin
+        mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
+        index = Template (filename=os.path.abspath('.') + '/html/ffserver.html', lookup=mylookup)
+        return index.render()
+
+class Plex():
+
+    @cherrypy.expose
+    def index(self):
+        #todo Some subscribe call here and elsewhere to put message on bus we have selected something and call appropriate plugin
+        mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
+        index = Template (filename=os.path.abspath('.') + '/html/plex.html', lookup=mylookup)
+        return index.render()
+
+class DreamboxServer():
+
+    @cherrypy.expose
+    def index(self):
+        #todo Some subscribe call here and elsewhere to put message on bus we have selected something and call appropriate plugin
+        mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
+        index = Template (filename=os.path.abspath('.') + '/html/dreamboxserver.html', lookup=mylookup)
+        return index.render()
+
 class Home():
 
     Feeds = Feeds()
     Stream = Stream()
     Bouquets = Bouquets()
+    Dreambox = Dreambox()
+    FFMPEG =FFMPEG()
+    FFServer = FFServer()
+    Plex = Plex()
+    DreamboxServer = DreamboxServer()
 
 
     @cherrypy.expose

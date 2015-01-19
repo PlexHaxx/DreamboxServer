@@ -4,6 +4,8 @@ import os
 from mako.template import Template
 from mako.lookup import TemplateLookup
 from Views.PageViews import Feeds, FFMPEG, FFServer, Stream, Bouquets, Dreambox, DreamboxServer, Plex, About
+from Plugins.BouquetMonitor import BouquetMonitor
+from Plugins.DBHandler import DBHandler
 
 
 
@@ -37,6 +39,11 @@ class Home():
     Plex = Plex()
     DreamboxServer = DreamboxServer()
     About = About()
+    BouquetMonitor(cherrypy.engine).subscribe()
+    DBHandler(cherrypy.engine).subscribe()
+
+
+
 
 
     @cherrypy.expose
@@ -44,6 +51,7 @@ class Home():
         import os
         mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
         index = Template (filename=os.path.abspath('.') + '/html/index.html', lookup=mylookup)
+
         return index.render()
 
 

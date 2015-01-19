@@ -3,27 +3,46 @@
 import pycurl
 from StringIO import StringIO
 from urllib import urlencode
+from BeautifulSoup import BeautifulSoup
 
 import cherrypy
 
 class BouquetMonitor(cherrypy.process.plugins.Monitor):
 
 
-    def __init__(self):
-
-        super(BouquetMonitor, self).__init__(cherrypy.engine, None, )
+    def __init__(self, bus ):
+        super(BouquetMonitor, self).__init__(bus, callback=None, frequency=10)
         self.host = '192.168.1.252'
         self.port = 80
-
-        self.frequency= 60
         self.callback = self.monitor
+        self.name = 'Bouquets Monitor'
+        self.old_bouquets = None
+        self.old_channels = None
+
 
 
     def monitor(self):
-        self.get_bouquets(self.host, self.port)
+        self.bus.log('in thread')
+        self.process_bouquets(self.host, self.port)
 
 
-    def get_bouquets(self, host, port):
+
+    def process_bouquets(self, host, port):
+
+
+        bouquet_xml = self.get_bouquets_from_receiver(host, port)
+        if self.old_bouquets != bouquet_xml or self.old_bouquets is None:
+            bouquets = self.parse_xml_for_bouquets(bouquet_xml)
+        else:
+            bouquets = self.parse_xml_for_bouquets(self.old_bouquets)
+
+        for k, v in bouquets:
+            channel_xml = self.get_channels_from_service(host, port, k)
+        cherrypy.engine.publish('bouquet_update', bouquets)
+
+
+
+    def get_bouquets_from_receiver(self, host, port):
 
         url = 'http://{}:{}/web/getservices'.format(host, port)
         buffer = StringIO()
@@ -32,20 +51,23 @@ class BouquetMonitor(cherrypy.process.plugins.Monitor):
         c.setopt(c.WRITEDATA, buffer)
         c.perform()
         c.close()
-        print buffer.getvalue()
         return buffer.getvalue()
 
+    def parse_xml_for_bouquets(self, xml):
+
+        e2service_details = lambda y: y.findAll(['e2servicereference', 'e2servicename'])
+        e2service = lambda y: y.findAll('e2service')
+
+        self.old_bouquets = xml
+        self.bus.log('updated')
+        bouquet_xml = BeautifulSoup(self.old_bouquets)
+        bouquets = [(a[0].text, a[1].text) for a in [e2service_details(x) for x in e2service(bouquet_xml)]]
+        return bouquets
 
 
-    def get_current_service(host, web):
 
-        url = 'http://{}:{}/web/getcurrent'.format(host, web)
-        try:
-            soup = get_data((url, None))
-            results = get_current_service_info(soup)
-        except:
-            raise
-        return results
+
+
 
     def get_channels_from_service(self, host, web, sRef=None, show_epg=False):
 
@@ -54,17 +76,12 @@ class BouquetMonitor(cherrypy.process.plugins.Monitor):
         c = pycurl.Curl()
         c.setopt(c.URL, url)
         c.setopt(c.WRITEDATA, buffer)
-        post_data = {'sRef': '1:7:1:0:0:0:0:0:0:0:FROM BOUQUET "userbouquet.enterainment__tv_.tv"'}
-        # Form data must be provided already urlencoded.
+        post_data = {'sRef': sRef}
         postfields = urlencode(post_data)
-        # Sets request method to POST,
-        # Content-Type header to application/x-www-form-urlencoded
-        # and data to send in request body.
         c.setopt(c.POSTFIELDS, postfields)
         c.perform()
         c.close()
-        print buffer.getvalue()
-        return buffer
+        return buffer.getvalue()
 
         url = 'http://{}:{}/web/getservices'.format(host, web)
         data = {'sRef': sRef}
@@ -137,4 +154,4 @@ class BouquetMonitor(cherrypy.process.plugins.Monitor):
 
 if __name__ == '__main__':
     d = BouquetMonitor()
-    d.get_bouquets('192.168.1.252', 80)
+    d.process_bouquets('192.168.1.252', 80)

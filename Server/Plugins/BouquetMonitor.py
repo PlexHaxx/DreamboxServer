@@ -4,13 +4,23 @@ import pycurl
 from StringIO import StringIO
 from urllib import urlencode
 
+import cherrypy
 
-class BouquetMonitor():
+class BouquetMonitor(cherrypy.process.plugins.Monitor):
 
 
     def __init__(self):
-        host = '192.168.1.252'
-        port = 80
+
+        super(BouquetMonitor, self).__init__(cherrypy.engine, None, )
+        self.host = '192.168.1.252'
+        self.port = 80
+
+        self.frequency= 60
+        self.callback = self.monitor
+
+
+    def monitor(self):
+        self.get_bouquets(self.host, self.port)
 
 
     def get_bouquets(self, host, port):
@@ -23,13 +33,7 @@ class BouquetMonitor():
         c.perform()
         c.close()
         print buffer.getvalue()
-        return buffer
-
-        soup = get_data((url, None))
-
-        results = get_service_name(soup)
-
-        return results
+        return buffer.getvalue()
 
 
 

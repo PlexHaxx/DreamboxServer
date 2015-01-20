@@ -17,8 +17,7 @@ class BouquetMonitor(cherrypy.process.plugins.Monitor):
         self.callback = self.monitor
         self.name = 'Bouquets Monitor'
         self.old_bouquets = None
-        self.old_channels = None
-
+        self.old_channels = {}
 
 
     def monitor(self):
@@ -38,8 +37,17 @@ class BouquetMonitor(cherrypy.process.plugins.Monitor):
 
         for k, v in bouquets:
             channel_xml = self.get_channels_from_service(host, port, k)
-        cherrypy.engine.publish('bouquet_update', bouquets)
+            if k not in old channels :
+                self.old_channels[k] = channel_xml
+            else:
+                if self.old_channels[k] != channel_xml:
+                    #update
+                    channels = None
+                else:
+                    channels = self.parse_xml_for_channels(channel_xml)
 
+
+        cherrypy.engine.publish('bouquet_update', bouquets)
 
 
     def get_bouquets_from_receiver(self, host, port):

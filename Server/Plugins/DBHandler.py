@@ -89,12 +89,12 @@ class DBHandler(SimplePlugin):
 
         db = sqlite3.connect(DBHandler.DATABASE_NAME)
         curs = db.cursor()
-        curs.execute('''SELECT bo_id, bo_service_name, bo_service_ref FROM bouquets where bo_deleted = 0''')
+        curs.execute('''SELECT bo_id, bo_service_name, bo_service_ref FROM bouquet''')
         curs.fetchall()
 
         bouquets = json.dumps(dict([(row[0], row[1]) for row in curs]))
         self.bus.log(bouquets)
-        cherrypy.engine.publish('bouquet_response', bouquets)
+        cherrypy.engine.publish('bouquet_response', 'dfdff')
 
 
 

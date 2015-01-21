@@ -55,10 +55,14 @@ class Home():
         return index.render()
 
     @cherrypy.expose
-    def bouquets(self):
+    def bouquets(self, bouquets = None):
 
-        cherrypy.engine.subscribe('bouquet_response', )
-
+        if bouquets is None:
+            cherrypy.engine.subscribe('bouquet_response', self.bouquets)
+            cherrypy.engine.publish('bouquet_request')
+        else:
+            return bouquets
+        return 'sdfdsfgfhfghfg'
 
 cherrypy.quickstart(Home(), config=config)
 """

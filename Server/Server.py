@@ -3,10 +3,11 @@ import cherrypy
 import os
 from mako.template import Template
 from mako.lookup import TemplateLookup
-from Views.PageViews import Feeds, FFMPEG, FFServer, Stream, Bouquets, Dreambox, DreamboxServer, Plex, About
 from Plugins.BouquetMonitor import BouquetMonitor
+from Plugins.DBHandler import Response
 from Plugins.DBHandler import DBHandler
-
+from Queue import PriorityQueue
+import time
 
 
 path = os.path.abspath(os.path.dirname(__file__))
@@ -28,6 +29,7 @@ config = {
 }
 
 
+
 class Home():
 
     Feeds = Feeds()
@@ -42,6 +44,17 @@ class Home():
     BouquetMonitor(cherrypy.engine).subscribe()
     DBHandler(cherrypy.engine).subscribe()
 
+    def __init__(self):
+        cherrypy.engine.subscribe('bouquet_response', self.handle_response)
+
+        self.q = PriorityQueue()
+
+    def handle_response(self, response):
+        self.q.put(response)
+
+
+
+
 
 
 
@@ -55,14 +68,23 @@ class Home():
         return index.render()
 
     @cherrypy.expose
-    def bouquets(self, bouquets = None):
+    def bouquets(self):
+        cherrypy.engine.publish('bouquet_request', 'bouquet_response')
+        response = None
+        attempts = 0
+        while True:
+            response = self.q.get(timeout=5)
+            if response.where != 'bouquet_response':
+                self.c.put(response)
+                time.sleep(0.02)
+                attempts += 1
+            else:
+                break
+            if attempts == 100:
+                break
+        return response.data if response is not None else ('error', 'Unable to get response from database')
 
-        if bouquets is None:
-            cherrypy.engine.subscribe('bouquet_response', self.bouquets)
-            cherrypy.engine.publish('bouquet_request')
-        else:
-            return bouquets
-        return 'sdfdsfgfhfghfg'
+
 
 cherrypy.quickstart(Home(), config=config)
 """

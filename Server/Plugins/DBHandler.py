@@ -24,6 +24,17 @@ ch_sql = """CREATE  TABLE IF NOT EXISTS
             "ch_deleted" INTEGER NOT NULL  DEFAULT 0)"""
 
 
+class Response(object):
+
+    def __init__(self, priority, where, data):
+        self.priority = priority
+        self.where = where
+        self.data = data
+        return
+
+    def __cmp__(self, other):
+        return cmp(self.priority, other.priority)
+
 class DBHandler(SimplePlugin):
 
     DATABASE_NAME = 'dreamboxserver.sqlite'
@@ -85,16 +96,18 @@ class DBHandler(SimplePlugin):
         db.close()
 
 
-    def get_bouquets(self):
+    def get_bouquets(self, where):
+        #TODO implement where - should be bouquet_response
 
         db = sqlite3.connect(DBHandler.DATABASE_NAME)
         curs = db.cursor()
         curs.execute('''SELECT bo_id, bo_service_name, bo_service_ref FROM bouquet''')
         curs.fetchall()
 
-        bouquets = json.dumps(dict([(row[0], row[1]) for row in curs]))
-        self.bus.log(bouquets)
-        cherrypy.engine.publish('bouquet_response', 'dfdff')
+        data = json.dumps(dict([(row[0], row[1]) for row in curs]))
+        self.bus.log(data)
+        response = Response(1, where, data)
+        cherrypy.engine.publish('bouquet_response', response)
 
 
 

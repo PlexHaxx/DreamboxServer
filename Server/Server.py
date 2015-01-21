@@ -13,7 +13,7 @@ path = os.path.abspath(os.path.dirname(__file__))
 config = {
   'global' : {
     'server.socket_host' : '127.0.0.1',
-    'server.socket_port' : 9090,
+    'server.socket_port' : 9095,
     'server.thread_pool' : 10
   },
   '/bootstrap' : {
@@ -53,6 +53,11 @@ class Home():
         index = Template (filename=os.path.abspath('.') + '/html/index.html', lookup=mylookup)
 
         return index.render()
+
+    @cherrypy.expose
+    def bouquets(self):
+
+        cherrypy.engine.subscribe('bouquet_response', )
 
 
 cherrypy.quickstart(Home(), config=config)

@@ -11,7 +11,7 @@ class BouquetMonitor(cherrypy.process.plugins.Monitor):
 
 
     def __init__(self, bus ):
-        super(BouquetMonitor, self).__init__(bus, callback=None, frequency=10)
+        super(BouquetMonitor, self).__init__(bus, callback=None, frequency=5)
         self.host = '192.168.1.252'
         self.port = 80
         self.callback = self.monitor
@@ -24,30 +24,35 @@ class BouquetMonitor(cherrypy.process.plugins.Monitor):
         self.bus.log('in thread')
         self.process_bouquets(self.host, self.port)
 
-
-
     def process_bouquets(self, host, port):
 
+        update = False
 
+        channels = {}
+
+        # this just gets a list of bouquets
         bouquet_xml = self.get_bouquets_from_receiver(host, port)
         if self.old_bouquets != bouquet_xml or self.old_bouquets is None:
             bouquets = self.parse_xml_for_bouquets(bouquet_xml)
+            update = True
         else:
             bouquets = self.parse_xml_for_bouquets(self.old_bouquets)
 
+        #loop through the bouquets and get the channels. Save them all, and update all if one has changed
         for k, v in bouquets:
             channel_xml = self.get_channels_from_service(host, port, k)
-            if k not in old channels :
-                self.old_channels[k] = channel_xml
+            # have we got a new bouquet with empty channels
+            if (k, v) not in self.old_channels:
+                # Add channels
+                channels[(k, v)] = self.parse_xml_for_channels((k,v), channel_xml)
+                update = True
             else:
-                if self.old_channels[k] != channel_xml:
-                    #update
-                    channels = None
-                else:
-                    channels = self.parse_xml_for_channels(channel_xml)
+                if self.old_channels[(k, v)] != channel_xml:
+                    update = True
+                channels[(k, v)] = self.parse_xml_for_channels((k,v), channel_xml)
 
-
-        cherrypy.engine.publish('bouquet_update', bouquets)
+        if update:
+            cherrypy.engine.publish('bouquet_update', channels)
 
 
     def get_bouquets_from_receiver(self, host, port):
@@ -67,13 +72,20 @@ class BouquetMonitor(cherrypy.process.plugins.Monitor):
         e2service = lambda y: y.findAll('e2service')
 
         self.old_bouquets = xml
-        self.bus.log('updated')
         bouquet_xml = BeautifulSoup(self.old_bouquets)
         bouquets = [(a[0].text, a[1].text) for a in [e2service_details(x) for x in e2service(bouquet_xml)]]
         return bouquets
 
 
+    def parse_xml_for_channels(self, bouquet,  xml):
 
+        e2service_details = lambda y: y.findAll(['e2servicereference', 'e2servicename'])
+        e2service = lambda y: y.findAll('e2service')
+
+        self.old_channels[bouquet] = xml
+        channel_xml = BeautifulSoup(self.old_channels[bouquet])
+        channels = [(a[0].text, a[1].text) for a in [e2service_details(x) for x in e2service(channel_xml)]]
+        return channels
 
 
 
@@ -91,12 +103,6 @@ class BouquetMonitor(cherrypy.process.plugins.Monitor):
         c.close()
         return buffer.getvalue()
 
-        url = 'http://{}:{}/web/getservices'.format(host, web)
-        data = {'sRef': sRef}
-        soup = get_data((url, data))
-        results = get_service_name(soup, host, web, show_epg)
-        return results
-
 
     def get_channels_from_epg(host, web, bRef):
 
@@ -107,58 +113,6 @@ class BouquetMonitor(cherrypy.process.plugins.Monitor):
         return results
 
 
-    def get_fullepg(host, web, sRef):
-
-        url = 'http://{}:{}/web/epgservice'.format(host, web)
-        data = {'sRef': sRef}
-        soup = get_data((url, data))
-        results = get_events(soup)
-        return results
-
-    def get_now(host, web, sRef):
-
-        url = 'http://{}:{}/web/epgservicenow'.format(host, web)
-        data = {'sRef': sRef}
-        soup = get_data((url, data))
-        results = get_events(soup)
-        return results
-
-
-    def get_nownext(host, web, sRef):
-
-        url = 'http://{}:{}/web/epgservicenow'.format(host, web)
-        url2 = 'http://{}:{}/web/epgservicenext'.format(host, web)
-        data = {'sRef': sRef}
-        soup = get_data((url, data), (url2, data))
-        results = get_events(soup)
-        return results
-
-    ###############################################################
-    # Gets the stuff we need from the box and returns soup        #
-    ###############################################################
-    def get_data(*args):
-        #TODO Pass in a timeout value here
-        from httplib2 import Http
-        from urllib import urlencode
-        req = Http(timeout=10)
-        results = []
-        for item in args:
-            u = item[0]
-            data = item[1]
-            print data
-            try:
-                if data:
-                    headers = {'Content-type': 'application/x-www-form-urlencoded'}
-                    resp, content = req.request(u, "POST", headers=headers, body=urlencode(data))
-                    print resp, content
-                else:
-                    resp, content = req.request(u, "GET", data)
-                soup = BeautifulSoup(content)
-                results.append(soup)
-            except:
-
-                raise
-        return results
 
 if __name__ == '__main__':
     d = BouquetMonitor()

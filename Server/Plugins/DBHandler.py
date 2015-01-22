@@ -1,5 +1,4 @@
-
-
+from queue import PriorityQueue
 from cherrypy.process.plugins import SimplePlugin
 import cherrypy
 from cherrypy.process import wspbus, plugins
@@ -24,16 +23,24 @@ ch_sql = """CREATE  TABLE IF NOT EXISTS
             "ch_deleted" INTEGER NOT NULL  DEFAULT 0)"""
 
 
-class Response(object):
+class MessageResponse(object):
+    """
+    Class to be used to pass data along the bus in response to a particular publish
+    priority = Priority of a message. e.g jump to the form of the queue
+    script = The script that the response message is for
+    action = The action of the script that will process the response message.
+    """
 
-    def __init__(self, priority, where, data):
+    def __init__(self, priority, script, action, data):
         self.priority = priority
-        self.where = where
+        self.script = script
+        self.action = action
         self.data = data
         return
 
     def __cmp__(self, other):
         return cmp(self.priority, other.priority)
+
 
 class DBHandler(SimplePlugin):
 
@@ -43,7 +50,6 @@ class DBHandler(SimplePlugin):
 
         super(DBHandler, self).__init__(bus)
 
-
         sqldb = sqlite3.connect(DBHandler.DATABASE_NAME, timeout=10)
         cursor = sqldb.cursor()
         # create tables
@@ -51,27 +57,38 @@ class DBHandler(SimplePlugin):
         cursor.execute(ch_sql)
         sqldb.commit()
         sqldb.close()
-
-
-
-
+        # A queue to store any responses we may want
+        self.response_queue = PriorityQueue()
 
     def start(self):
         self.bus.log('Waiting for db stuff')
-        self.bus.subscribe('bouquet_update', self.bouquet_update)
-        self.bus.subscribe('bouquet_request', self.get_bouquets)
-        self.bus.subscribe('channel_request', self.get_channels)
-        self.bus.subscribe('all_channel_request', self.get_all_channels)
-        #todo here, just have one subscribe and get a function to parse the request and distribute to the response
         self.bus.subscribe('db_handler', self.dispatch)
 
-    def dispatch(self):
-        pass
+    def dispatch(self, message):
+        """
+        Dispatcher to handle the message. A request will be handled by the if statements, routing the
+        correct message to the correct function
+        An unknown action will
+        :param message:
+        :return:
+        """
+        if isinstance(message, tuple):
+            if message.action == 'bouquet_update':
+                self.bouquet_update(message)
+            if message.action == 'get_bouquets':
+                self.get_bouquets(message)
+            if message.action == 'get_channels':
+                self.get_channels(message)
+            if message.action == 'get_all_channels':
+                self.get_all_channels(message)
+        else:
+            self.response_queue.put(message)
+
 
 
     def stop(self):
         self.bus.log('Cant be arsed anymore')
-        self.bus.unsubscribe('bouquet_update', self.bouquet_update)
+        self.bus.unsubscribe('db_handler', self.dispatch)
 
 
     def bouquet_update(self, bouquets):
@@ -114,7 +131,7 @@ class DBHandler(SimplePlugin):
 
         data = json.dumps(dict([(row[1], (row[0], row[2])) for row in rows]))
 
-        response = Response(1, where, data)
+        response = MessageResponse(1, where, data)
         cherrypy.engine.publish('response', response)
 
     def get_channels(self, data):
@@ -129,12 +146,21 @@ class DBHandler(SimplePlugin):
 
         data = json.dumps(dict([(row[0], (row[1], row[2])) for row in rows]))
 
-        response = Response(1, where, data)
+        response = MessageResponse(1, where, data)
         cherrypy.engine.publish('response', response)
 
-    def get_all_channels(self, data):
-        #TODO implement where - should be bouquet_response
-        where, data = data
+    def get_all_channels(self, request):
+        """
+        Received a request from the bus in response to a publish elsewhere
+        Response is a 3-tuple in the format (script, action, data) where
+        script = script that sent the request and requires a response
+        action = THe action on the script to process the response
+        data = the actual data to process
+        :param request:
+        :return:
+        """
+
+        script, action, data = request
 
         db = sqlite3.connect(DBHandler.DATABASE_NAME)
         curs = db.cursor()
@@ -143,8 +169,7 @@ class DBHandler(SimplePlugin):
         rows  = curs.fetchall()
 
         data = json.dumps(dict([(row[0], row[1]) for row in rows]))
-        #todo need to update to add an additional param in response for the channel to publish to ie now_next_monitor
-        response = Response(2, where, data)
+        response = MessageResponse(priority=2, script=script, action=action, data=data)
 
         cherrypy.engine.publish('now_next_monitor', response)
 

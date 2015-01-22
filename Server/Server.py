@@ -4,6 +4,7 @@ import os
 from mako.template import Template
 from mako.lookup import TemplateLookup
 from Plugins.BouquetMonitor import BouquetMonitor
+from Views.PageViews import Feeds, Dreambox, DreamboxServer, FFServer, FFMPEG, Plex,About, Bouquets, Stream, API
 from Plugins.DBHandler import Response
 from Plugins.DBHandler import DBHandler
 from Queue import PriorityQueue
@@ -15,7 +16,7 @@ config = {
   'global' : {
     'server.socket_host' : '127.0.0.1',
     'server.socket_port' : 9095,
-    'server.thread_pool' : 10
+    'server.thread_pool' : 100
   },
   '/bootstrap' : {
     'tools.staticdir.on'            : True,
@@ -43,18 +44,7 @@ class Home():
     About = About()
     BouquetMonitor(cherrypy.engine).subscribe()
     DBHandler(cherrypy.engine).subscribe()
-
-    def __init__(self):
-        cherrypy.engine.subscribe('bouquet_response', self.handle_response)
-
-        self.q = PriorityQueue()
-
-    def handle_response(self, response):
-        self.q.put(response)
-
-
-
-
+    API = API()
 
 
 
@@ -67,22 +57,8 @@ class Home():
 
         return index.render()
 
-    @cherrypy.expose
-    def bouquets(self):
-        cherrypy.engine.publish('bouquet_request', 'bouquet_response')
-        response = None
-        attempts = 0
-        while True:
-            response = self.q.get(timeout=5)
-            if response.where != 'bouquet_response':
-                self.c.put(response)
-                time.sleep(0.02)
-                attempts += 1
-            else:
-                break
-            if attempts == 100:
-                break
-        return response.data if response is not None else ('error', 'Unable to get response from database')
+
+
 
 
 

@@ -60,6 +60,13 @@ class DBHandler(SimplePlugin):
         self.bus.log('Waiting for db stuff')
         self.bus.subscribe('bouquet_update', self.bouquet_update)
         self.bus.subscribe('bouquet_request', self.get_bouquets)
+        self.bus.subscribe('channel_request', self.get_channels)
+        self.bus.subscribe('all_channel_request', self.get_all_channels)
+        #todo here, just have one subscribe and get a function to parse the request and distribute to the response
+        self.bus.subscribe('db_handler', self.dispatch)
+
+    def dispatch(self):
+        pass
 
 
     def stop(self):
@@ -96,22 +103,50 @@ class DBHandler(SimplePlugin):
         db.close()
 
 
-    def get_bouquets(self, where):
+    def get_bouquets(self, data):
         #TODO implement where - should be bouquet_response
+        where, data = data
 
         db = sqlite3.connect(DBHandler.DATABASE_NAME)
         curs = db.cursor()
-        curs.execute('''SELECT bo_id, bo_service_name, bo_service_ref FROM bouquet''')
-        curs.fetchall()
+        curs.execute('''SELECT bo_service_name, bo_service_ref, bo_id FROM bouquet  WHERE bo_deleted = 0''')
+        rows  = curs.fetchall()
 
-        data = json.dumps(dict([(row[0], row[1]) for row in curs]))
-        self.bus.log(data)
+        data = json.dumps(dict([(row[1], (row[0], row[2])) for row in rows]))
+
         response = Response(1, where, data)
-        cherrypy.engine.publish('bouquet_response', response)
+        cherrypy.engine.publish('response', response)
 
+    def get_channels(self, data):
+        #TODO implement where - should be bouquet_response
+        where, data = data
 
+        db = sqlite3.connect(DBHandler.DATABASE_NAME)
+        curs = db.cursor()
+        self.bus.log(data)
+        curs.execute("""SELECT ch_service_name, channel.ch_service_ref, ch_id from channel where ch_deleted = 0 and ch_bo_id = ?""", [data])
+        rows  = curs.fetchall()
 
+        data = json.dumps(dict([(row[0], (row[1], row[2])) for row in rows]))
 
+        response = Response(1, where, data)
+        cherrypy.engine.publish('response', response)
+
+    def get_all_channels(self, data):
+        #TODO implement where - should be bouquet_response
+        where, data = data
+
+        db = sqlite3.connect(DBHandler.DATABASE_NAME)
+        curs = db.cursor()
+        self.bus.log(data)
+        curs.execute("""SELECT channel.ch_service_ref, ch_id from channel where ch_deleted = 0""")
+        rows  = curs.fetchall()
+
+        data = json.dumps(dict([(row[0], row[1]) for row in rows]))
+        #todo need to update to add an additional param in response for the channel to publish to ie now_next_monitor
+        response = Response(2, where, data)
+
+        cherrypy.engine.publish('now_next_monitor', response)
 
 
 

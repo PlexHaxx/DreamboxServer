@@ -1,8 +1,42 @@
-
+from Queue import PriorityQueue
 from mako.template import Template
 from mako.lookup import TemplateLookup
 import cherrypy
 import os
+
+class API():
+
+    def __init__(self):
+        self.q = PriorityQueue()
+        cherrypy.engine.subscribe('response', self.handle_response)
+
+
+    def handle_response(self, response):
+        self.q.put(response)
+
+    @cherrypy.expose
+    def index(self):
+        return '''Some infor of the call
+        get_bouquets = {name, ref}'''
+
+    @cherrypy.expose
+    def get_bouquets(self):
+        cherrypy.engine.publish('bouquet_request', ('get_bouquets', None))
+        for i in xrange(1, 100, 1):
+            resp = self.q.get()
+            return resp.data if resp.where == 'get_bouquets' else self.q.put(resp)
+        return None
+
+    @cherrypy.expose
+    def get_channels(self, bouquet_id):
+
+
+        #todo validate sref
+        cherrypy.engine.publish('channel_request', ('get_channels', bouquet_id))
+        for i in xrange(1, 100, 1):
+            resp = self.q.get()
+            return resp.data if resp.where == 'get_channels' else self.q.put(resp)
+        return None
 
 
 class Feeds():
@@ -25,6 +59,8 @@ class Stream():
     def audio2(self):
 
         raise cherrypy.HTTPRedirect('http://localhost:28090/live_audio2.mkv')
+
+
 
 class About():
 

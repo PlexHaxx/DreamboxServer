@@ -1,4 +1,5 @@
-from queue import PriorityQueue
+from Queue import PriorityQueue
+from collections import namedtuple
 from cherrypy.process.plugins import SimplePlugin
 import cherrypy
 from cherrypy.process import wspbus, plugins
@@ -22,7 +23,16 @@ ch_sql = """CREATE  TABLE IF NOT EXISTS
             "ch_bo_id" INTEGER,
             "ch_deleted" INTEGER NOT NULL  DEFAULT 0)"""
 
-
+epg_sql = """CREATE  TABLE IF NOT EXISTS "main"."epg"
+              ("epg_event_id" DOUBLE PRIMARY KEY  NOT NULL  UNIQUE ,
+              "epg_event_start" DOUBLE NOT NULL ,
+              "epg_event_duration" DOUBLE NOT NULL ,
+              "epg_event_current_time" DOUBLE NOT NULL ,
+              "epg_event_title" TEXT,
+              "epg_event_description" TEXT,
+              "epg_event_description_extended" TEXT,
+              "epg_event_service_ref" INTEGER NOT NULL ,
+              "epg_event_deleted" INTEGER NOT NULL  DEFAULT 0)"""
 class MessageResponse(object):
     """
     Class to be used to pass data along the bus in response to a particular publish
@@ -41,6 +51,7 @@ class MessageResponse(object):
     def __cmp__(self, other):
         return cmp(self.priority, other.priority)
 
+MessageRequest = namedtuple('MessageRequest', 'script, action, data')
 
 class DBHandler(SimplePlugin):
 
@@ -55,6 +66,7 @@ class DBHandler(SimplePlugin):
         # create tables
         cursor.execute(b_sql)
         cursor.execute(ch_sql)
+        cursor.execute(epg_sql)
         sqldb.commit()
         sqldb.close()
         # A queue to store any responses we may want
@@ -81,6 +93,8 @@ class DBHandler(SimplePlugin):
                 self.get_channels(message)
             if message.action == 'get_all_channels':
                 self.get_all_channels(message)
+            if message .action == 'epg_update':
+                self. epg_update(message)
         else:
             self.response_queue.put(message)
 
@@ -91,7 +105,7 @@ class DBHandler(SimplePlugin):
         self.bus.unsubscribe('db_handler', self.dispatch)
 
 
-    def bouquet_update(self, bouquets):
+    def epg_update(self, bouquets):
         '''
         Updates the npuquet records with the bpuquests passed in as a parameter. Passes in a dict where the key is
         the bpuquet sref and the value is the associated list of channels
@@ -101,8 +115,22 @@ class DBHandler(SimplePlugin):
 
         self.bus.log('Got something  ' + str(bouquets))
 
-        #1. get the bouquest in a list and update as requeired, if channels need updating flag
-        b = [(k, v) for k, v in bouquets]
+
+        db = sqlite3.connect(DBHandler.DATABASE_NAME)
+        curs = db.cursor()
+        curs.execute('DELETE FROM epg')
+        curs.execute('VACUUM')
+        db.commit()
+
+
+        curs.executemany("""INSERT INTO epg (epg_event_id, epg_event_start, epg_event_duration, epg_event_current_time,
+                            epg_event_title, epg_event_description, epg_event_description_extended,
+                            epg_event_service_ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""", bouquets.data)
+        db.commit()
+        db.close()
+
+    def bouquet_update(self, bouquets):
+
         db = sqlite3.connect(DBHandler.DATABASE_NAME)
         curs = db.cursor()
         curs.execute('DELETE FROM bouquet')
@@ -110,19 +138,20 @@ class DBHandler(SimplePlugin):
         curs.execute('VACUUM')
         db.commit()
 
-        for k, v in b:
+        for k, v in bouquets.data:
             last_id = curs.execute('INSERT INTO bouquet(bo_service_ref, bo_service_name) VALUES(?, ?)', (k, v)).lastrowid
-            c = bouquets[(k,v)]
+            c = bouquets.data[(k,v)]
             d = [(last_id, a , b) for a, b in c]
             self.bus.log(str(d))
-            curs.executemany("""INSERT INTO channel (ch_bo_id, ch_service_name, ch_service_ref) VALUES (?,?,?)""", d)
+            curs.executemany("""INSERT INTO channel (ch_bo_id, ch_service_ref, ch_service_name) VALUES (?,?,?)""", d)
         db.commit()
         db.close()
 
 
+
     def get_bouquets(self, data):
         #TODO implement where - should be bouquet_response
-        where, data = data
+        script, action, data = data
 
         db = sqlite3.connect(DBHandler.DATABASE_NAME)
         curs = db.cursor()
@@ -131,12 +160,12 @@ class DBHandler(SimplePlugin):
 
         data = json.dumps(dict([(row[1], (row[0], row[2])) for row in rows]))
 
-        response = MessageResponse(1, where, data)
-        cherrypy.engine.publish('response', response)
+        response = MessageResponse(1, script, action, data)
+        cherrypy.engine.publish(script, response)
 
     def get_channels(self, data):
         #TODO implement where - should be bouquet_response
-        where, data = data
+        script, action, data = data
 
         db = sqlite3.connect(DBHandler.DATABASE_NAME)
         curs = db.cursor()
@@ -146,8 +175,8 @@ class DBHandler(SimplePlugin):
 
         data = json.dumps(dict([(row[0], (row[1], row[2])) for row in rows]))
 
-        response = MessageResponse(1, where, data)
-        cherrypy.engine.publish('response', response)
+        response = MessageResponse(1, script, action, data)
+        cherrypy.engine.publish(script, response)
 
     def get_all_channels(self, request):
         """
@@ -164,14 +193,13 @@ class DBHandler(SimplePlugin):
 
         db = sqlite3.connect(DBHandler.DATABASE_NAME)
         curs = db.cursor()
-        self.bus.log(data)
         curs.execute("""SELECT channel.ch_service_ref, ch_id from channel where ch_deleted = 0""")
         rows  = curs.fetchall()
 
         data = json.dumps(dict([(row[0], row[1]) for row in rows]))
         response = MessageResponse(priority=2, script=script, action=action, data=data)
 
-        cherrypy.engine.publish('now_next_monitor', response)
+        cherrypy.engine.publish(script, response)
 
 
 

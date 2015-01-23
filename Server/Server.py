@@ -4,18 +4,17 @@ import os
 from mako.template import Template
 from mako.lookup import TemplateLookup
 from Plugins.BouquetMonitor import BouquetMonitor
-from Views.PageViews import Feeds, Dreambox, DreamboxServer, FFServer, FFMPEG, Plex,About, Bouquets, Stream, API
-from Plugins.DBHandler import Response
+from Plugins.EPGMonitor import EPGMonitor
+from Views.PageViews import Feeds, Dreambox, DreamboxServer, FFServer, FFMPEG, Plex, About, Bouquets, Stream, API
 from Plugins.DBHandler import DBHandler
-from Queue import PriorityQueue
-import time
+from Plugins.NowNextMonitor import NowNextMonitor
 
 
 path = os.path.abspath(os.path.dirname(__file__))
 config = {
   'global' : {
     'server.socket_host' : '127.0.0.1',
-    'server.socket_port' : 9095,
+    'server.socket_port' : 9090,
     'server.thread_pool' : 100
   },
   '/bootstrap' : {
@@ -43,6 +42,7 @@ class Home():
     DreamboxServer = DreamboxServer()
     About = About()
     BouquetMonitor(cherrypy.engine).subscribe()
+    EPGMonitor(cherrypy.engine).subscribe()
     DBHandler(cherrypy.engine).subscribe()
     API = API()
 

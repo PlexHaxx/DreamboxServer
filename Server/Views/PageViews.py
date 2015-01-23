@@ -1,8 +1,12 @@
 from Queue import PriorityQueue
+from collections import namedtuple
 from mako.template import Template
 from mako.lookup import TemplateLookup
 import cherrypy
 import os
+
+
+MessageRequest = namedtuple('MessageRequest', 'script, action, data', verbose=False)
 
 class API():
 
@@ -14,9 +18,9 @@ class API():
 
         if isinstance(message, tuple):
 
-            if message.action == 'something':
+            if message.action == 'get_bouquets':
                 pass
-            if message.action == 'else and so on':
+            if message.action == 'get_channels':
                 pass
         else:
             # we are waiting  for something
@@ -29,7 +33,8 @@ class API():
 
     @cherrypy.expose
     def get_bouquets(self):
-        cherrypy.engine.publish('db_handler', ('api', 'get_bouquets', None))
+        cherrypy.engine.publish('db_handler', MessageRequest('api', 'get_bouquets', None))
+        cherrypy.engine.log('after publish')
         for i in xrange(1, 100, 1):
             resp = self.q.get()
             return resp.data if resp.action == 'get_bouquets' else self.q.put(resp)
@@ -38,7 +43,7 @@ class API():
     @cherrypy.expose
     def get_channels(self, bouquet_id):
         #todo validate sref
-        cherrypy.engine.publish('channel_request', ('api', 'get_channels', bouquet_id))
+        cherrypy.engine.publish('db_handler', MessageRequest('api', 'get_channels', bouquet_id))
         for i in xrange(1, 100, 1):
             resp = self.q.get()
             return resp.data if resp.action == 'get_channels' else self.q.put(resp)

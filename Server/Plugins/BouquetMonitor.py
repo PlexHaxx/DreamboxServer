@@ -1,17 +1,19 @@
-
-
+from collections import namedtuple
 import pycurl
 from StringIO import StringIO
 from urllib import urlencode
 from BeautifulSoup import BeautifulSoup
 
+
 import cherrypy
+
+MessageRequest = namedtuple('MessageRequest', 'script, action, data')
 
 class BouquetMonitor(cherrypy.process.plugins.Monitor):
 
 
-    def __init__(self, bus ):
-        super(BouquetMonitor, self).__init__(bus, callback=None, frequency=5)
+    def __init__(self, bus):
+        super(BouquetMonitor, self).__init__(bus, callback=None, frequency=10)
         self.host = '192.168.1.252'
         self.port = 80
         self.callback = self.monitor
@@ -52,7 +54,7 @@ class BouquetMonitor(cherrypy.process.plugins.Monitor):
                 channels[(k, v)] = self.parse_xml_for_channels((k,v), channel_xml)
 
         if update:
-            cherrypy.engine.publish('bouquet_update', channels)
+            cherrypy.engine.publish('db_handler', MessageRequest('bouquet_monitor', 'bouquet_update', channels))
 
 
     def get_bouquets_from_receiver(self, host, port):

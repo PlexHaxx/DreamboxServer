@@ -51,9 +51,7 @@ class NowNextMonitor(cherrypy.process.plugins.Monitor):
         url = 'http://{}:{}/web/epgservicenext'.format(host, port)
         c.setopt(c.URL, url)
         c.perform()
-
         print buffer.getvalue()
-
         c.close()
         return buffer.getvalue()
 

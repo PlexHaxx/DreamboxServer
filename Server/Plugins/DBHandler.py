@@ -90,7 +90,7 @@ class DBHandler(SimplePlugin):
             if message.action == 'get_bouquets':
                 self.get_bouquets(message)
             if message.action == 'get_channels':
-                self.get_channels(message)
+                self.get_bouquet_channels(message)
             if message.action == 'get_all_channels':
                 self.get_all_channels(message)
             if message .action == 'epg_update':
@@ -148,23 +148,18 @@ class DBHandler(SimplePlugin):
         db.close()
 
 
-
     def get_bouquets(self, data):
-        #TODO implement where - should be bouquet_response
         script, action, data = data
 
         db = sqlite3.connect(DBHandler.DATABASE_NAME)
         curs = db.cursor()
         curs.execute('''SELECT bo_service_name, bo_service_ref, bo_id FROM bouquet  WHERE bo_deleted = 0''')
         rows  = curs.fetchall()
-
         data = json.dumps(dict([(row[1], (row[0], row[2])) for row in rows]))
-
         response = MessageResponse(1, script, action, data)
         cherrypy.engine.publish(script, response)
 
-    def get_channels(self, data):
-        #TODO implement where - should be bouquet_response
+    def get_bouquet_channels(self, data):
         script, action, data = data
 
         db = sqlite3.connect(DBHandler.DATABASE_NAME)
@@ -172,9 +167,25 @@ class DBHandler(SimplePlugin):
         self.bus.log(data)
         curs.execute("""SELECT ch_service_name, channel.ch_service_ref, ch_id from channel where ch_deleted = 0 and ch_bo_id = ?""", [data])
         rows  = curs.fetchall()
-
         data = json.dumps(dict([(row[0], (row[1], row[2])) for row in rows]))
+        response = MessageResponse(1, script, action, data)
+        cherrypy.engine.publish(script, response)
 
+    def get_epg_last_channels_times(self, data):
+        """
+        Returns the last start time for each channel in the databasse. This can be used to get the epg records
+        from the dreambox since we last updated, instead of continually fetching the complete epg
+        :param data:
+        :return:
+        """
+        script, action, data = data
+
+        db = sqlite3.connect(DBHandler.DATABASE_NAME)
+        curs = db.cursor()
+        self.bus.log(data)
+        curs.execute("""SELECT ch_service_name, channel.ch_service_ref, ch_id from channel where ch_deleted = 0 and ch_bo_id = ?""", [data])
+        rows  = curs.fetchall()
+        data = json.dumps(dict([(row[0], (row[1], row[2])) for row in rows]))
         response = MessageResponse(1, script, action, data)
         cherrypy.engine.publish(script, response)
 

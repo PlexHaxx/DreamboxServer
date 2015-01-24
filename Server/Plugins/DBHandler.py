@@ -5,6 +5,7 @@ import cherrypy
 from cherrypy.process import wspbus, plugins
 import sqlite3
 import json
+import time
 
 
 b_sql = """ CREATE TABLE IF NOT EXISTS
@@ -93,8 +94,12 @@ class DBHandler(SimplePlugin):
                 self.get_bouquet_channels(message)
             if message.action == 'get_all_channels':
                 self.get_all_channels(message)
-            if message .action == 'epg_update':
+            if message.action == 'epg_update':
                 self. epg_update(message)
+            if message.action == 'epg_now_next':
+                self.epg_now_next(message)
+            if message.action == 'update_now_next':
+                self.update_now_next(message)
         else:
             self.response_queue.put(message)
 
@@ -123,11 +128,12 @@ class DBHandler(SimplePlugin):
         db.commit()
 
 
-        curs.executemany("""INSERT INTO epg (epg_event_id, epg_event_start, epg_event_duration, epg_event_current_time,
+        curs.executemany("""INSERT INTO epg (epg_event_id, epg_event_start, epg_event_duration,
                             epg_event_title, epg_event_description, epg_event_description_extended,
-                            epg_event_service_ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""", bouquets.data)
+                            epg_event_service_ref) VALUES (?, ?, ?, ?, ?, ?, ?)""", bouquets.data)
         db.commit()
         db.close()
+
 
     def bouquet_update(self, bouquets):
 
@@ -146,6 +152,21 @@ class DBHandler(SimplePlugin):
             curs.executemany("""INSERT INTO channel (ch_bo_id, ch_service_ref, ch_service_name) VALUES (?,?,?)""", d)
         db.commit()
         db.close()
+
+    def update_now_next(self, data):
+
+        script, action, data = data
+        #split the data into db channel id, and epg now next data
+        if data:
+            db = sqlite3.connect(DBHandler.DATABASE_NAME)
+            curs = db.cursor()
+            curs.execute('DELETE FROM now_next')
+            curs.execute('VACUUM')
+            db.commit()
+            curs.executemany("""INSERT INTO now_next (nn_ch_id, nn_title, nn_sref, nn_start, nn_event_id, nn_description, nn_description_extended) VALUES (?,?,?,?,?,?,?)""", data)
+            db.commit()
+            db.close()
+
 
 
     def get_bouquets(self, data):
@@ -168,6 +189,37 @@ class DBHandler(SimplePlugin):
         curs.execute("""SELECT ch_service_name, channel.ch_service_ref, ch_id from channel where ch_deleted = 0 and ch_bo_id = ?""", [data])
         rows  = curs.fetchall()
         data = json.dumps(dict([(row[0], (row[1], row[2])) for row in rows]))
+        response = MessageResponse(1, script, action, data)
+        cherrypy.engine.publish(script, response)
+
+    def epg_now_next(self, data):
+        """
+        :param sRef: Gets the current and next event on the given channel
+        :return:
+        """
+        sql = """select * from (
+                        select epg_event_title, epg_event_service_ref, epg_event_start, epg_event_id, epg_event_description, epg_event_description_extended
+                        from epg
+                        where epg_event_start < ?  and epg_event_start + epg_event_duration > ?
+                        and epg_event_service_ref = ?
+                        union
+                        select epg_event_title, epg_event_service_ref, epg_event_start, epg_event_id, epg_event_description, epg_event_description_extended
+                        from epg
+                        where epg_event_start > ?
+                        and epg_event_service_ref = ? ) a
+                        order by epg_event_start LIMIT 2"""
+
+        script, action, data = data
+
+        db = sqlite3.connect(DBHandler.DATABASE_NAME)
+        curs = db.cursor()
+        now = int(time.time())
+        curs.execute(sql, [now, now, data[1], now, data[1]])
+        rows = curs.fetchall()
+        if rows:
+            data = [(data[0], row[0], row[1], row[2], row[3], row[4], row[5] ) for row in rows]
+        else:
+            data = []
         response = MessageResponse(1, script, action, data)
         cherrypy.engine.publish(script, response)
 

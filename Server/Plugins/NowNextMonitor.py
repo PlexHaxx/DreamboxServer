@@ -1,4 +1,6 @@
 from Queue import PriorityQueue
+from collections import namedtuple
+import json
 import pycurl
 from StringIO import StringIO
 from urllib import urlencode
@@ -6,54 +8,70 @@ from BeautifulSoup import BeautifulSoup
 
 import cherrypy
 
+MessageRequest = namedtuple('MessageRequest', 'script, action, data')
+
 class NowNextMonitor(cherrypy.process.plugins.Monitor):
 
 
     def __init__(self, bus ):
-        super(NowNextMonitor, self).__init__(bus, callback=None, frequency=5)
+        super(NowNextMonitor, self).__init__(bus, callback=None, frequency=10)
         self.host = '192.168.1.252'
         self.port = 80
         self.callback = self.monitor
         self.name = 'Now Next Monitor'
         self.q = PriorityQueue()
 
-        cherrypy.engine.subscribe('now_next_monitor', self.handle_response)
+        cherrypy.engine.subscribe('now_next_monitor', self.dispatch)
 
 
-    def handle_response(self, response):
-        self.q.put(response)
+    def dispatch(self, data):
+
+        if isinstance(data, tuple):
+            # we have received a request
+            pass
+        else:
+            #we have received a response from a request we sent
+            self.q.put(data)
 
 
     def monitor(self):
         self.bus.log('in thread now_next')
-        db_channels = self.get_channels_from_db(self.host, self.port)
-        self.get_now_next(db_channels)
+        db_channels = self.get_channels_from_db()
+        now_next = self.get_now_next_from_db(db_channels)
+        if now_next:
+            cherrypy.engine.publish('db_handler', MessageRequest('now_next_monitor', 'update_now_next', now_next))
 
-    def get_channels_from_db(self, host, port):
+    def get_channels_from_db(self):
 
-
-        cherrypy.engine.publish('all_channel_request', ('get_something', None))
+        cherrypy.engine.publish('db_handler', MessageRequest('now_next_monitor', 'get_all_channels', None))
         for i in xrange(1, 100, 1):
             resp = self.q.get()
-            return resp.data if resp.where == 'get_something' else self.q.put(resp)
+            return resp.data if resp.action == 'get_all_channels' else self.q.put(resp)
         return None
 
-    def get_now_next(self, host, port, sRef='1:0:1:1933:7FF:2:11A0000:0:0:0:'):
-        buffer = StringIO()
-        c = pycurl.Curl()
+    def get_now_next_from_db(self, channels):
+        """
+        Gets the now and next events for the given channel(s).
+        Where channels is a list of channels. Ideally used to process all channels at once, where
+        the resulting now next is passed to the db handler to insert in the NoNext table for the channel(s) passed through
+        """
 
-        url = 'http://{}:{}/web/epgservicenow'.format(host, port)
-        c.setopt(c.URL, url)
-        post_data = {'sRef': sRef}
-        postfields = urlencode(post_data)
-        c.setopt(c.POSTFIELDS, postfields)
-        c.perform()
-        url = 'http://{}:{}/web/epgservicenext'.format(host, port)
-        c.setopt(c.URL, url)
-        c.perform()
-        print buffer.getvalue()
-        c.close()
-        return buffer.getvalue()
+        # loop through the chaannels and get the  now next. A bit crap doing individual calls to the db, but its
+        # probabaly quicker and easier to process than doing a fancy sql staement on the whole table
+        now_next = []
+        if channels:
+            channels = json.loads(channels)
+
+            for sref, channel_id in channels.iteritems():
+                cherrypy.engine.publish('db_handler', MessageRequest('now_next_monitor', 'epg_now_next', [channel_id, sref]))
+                for i in xrange(1, 100, 1):
+                    resp = self.q.get()
+                    # append channel db id, epg data
+                    if resp.action == 'epg_now_next' :
+                        now_next += resp.data
+                        break
+                    else : self.q.put(resp)
+        return now_next
 
 
 

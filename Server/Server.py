@@ -7,6 +7,7 @@ from Plugins.BouquetMonitor import BouquetMonitor
 from Plugins.EPGMonitor import EPGMonitor
 from Views.PageViews import Feeds, Dreambox, DreamboxServer, FFServer, FFMPEG, Plex, About, Bouquets, Stream, API
 from Plugins.DBHandler import DBHandler
+from Plugins.MediaServer import MediaServer
 from Plugins.NowNextMonitor import NowNextMonitor
 
 
@@ -44,6 +45,8 @@ class Home():
     BouquetMonitor(cherrypy.engine).subscribe()
     EPGMonitor(cherrypy.engine).subscribe()
     DBHandler(cherrypy.engine).subscribe()
+    MediaServer(cherrypy.engine).subscribe()
+    NowNextMonitor(cherrypy.engine).subscribe()
     API = API()
 
 

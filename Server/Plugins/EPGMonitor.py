@@ -9,13 +9,18 @@ from BeautifulSoup import BeautifulSoup
 import cherrypy
 
 MessageRequest = namedtuple('MessageRequest', 'script, action, data', verbose=False)
+"""
+Script = Script that sent the message
+action = The action to invoke on the receiver
+data = The data, if any to pass to the receiver
+"""
 
 
 class EPGMonitor(cherrypy.process.plugins.Monitor):
 
 
     def __init__(self, bus ):
-        super(EPGMonitor, self).__init__(bus, callback=None, frequency=120)
+        super(EPGMonitor, self).__init__(bus, callback=None, frequency=3600)
         self.host = '192.168.1.252'
         self.port = 80
         self.callback = self.monitor
@@ -52,19 +57,16 @@ class EPGMonitor(cherrypy.process.plugins.Monitor):
         return {}
 
 
-
-
-
     def parse_xml_for_epg(self, xml):
 
-        e2service_details = lambda y: y.findAll(['e2eventid', 'e2eventstart','e2eventduration','e2eventcurrenttime','e2eventtitle','e2eventdescription','e2eventdescriptionextended','e2eventservicereference','e2servicename',])
+        e2service_details = lambda y: y.findAll(['e2eventid', 'e2eventstart','e2eventduration','e2eventtitle','e2eventdescription','e2eventdescriptionextended','e2eventservicereference','e2servicename',])
         e2service = lambda y: y.findAll('e2event')
 
 
 
         channel_xml = BeautifulSoup(xml)
         channels = [(a[0].text, a[1].text,a[2].text, a[3].text,a[4].text, a[5].
-                     text,a[6].text, a[7].text) for a in [e2service_details(x)
+                     text,a[6].text,) for a in [e2service_details(x)
                     for x in e2service(channel_xml)]]
         return channels
 
@@ -87,7 +89,6 @@ class EPGMonitor(cherrypy.process.plugins.Monitor):
         c.close()
 
         return buffer.getvalue()
-
 
 
 if __name__ == '__main__':

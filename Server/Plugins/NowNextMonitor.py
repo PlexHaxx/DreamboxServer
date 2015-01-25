@@ -1,38 +1,22 @@
-from Queue import PriorityQueue
-from collections import namedtuple
+
 import json
 import pycurl
 from StringIO import StringIO
 from urllib import urlencode
 from BeautifulSoup import BeautifulSoup
-
+from PluginBase import PluginBase, MessageRequest
 import cherrypy
 
-MessageRequest = namedtuple('MessageRequest', 'script, action, data')
 
-class NowNextMonitor(cherrypy.process.plugins.Monitor):
+class NowNextMonitor(PluginBase):
 
 
     def __init__(self, bus ):
-        super(NowNextMonitor, self).__init__(bus, callback=None, frequency=10)
+        super(NowNextMonitor, self).__init__(bus, name='Now_Next_Monitor', callback=None, frequency=20)
         self.host = '192.168.1.252'
         self.port = 80
         self.callback = self.monitor
-        self.name = 'Now Next Monitor'
-        self.q = PriorityQueue()
-
         cherrypy.engine.subscribe('now_next_monitor', self.dispatch)
-
-
-    def dispatch(self, data):
-
-        if isinstance(data, tuple):
-            # we have received a request
-            pass
-        else:
-            #we have received a response from a request we sent
-            self.q.put(data)
-
 
     def monitor(self):
         self.bus.log('in thread now_next')
@@ -73,8 +57,6 @@ class NowNextMonitor(cherrypy.process.plugins.Monitor):
                     else : self.q.put(resp)
         return now_next
 
-
-
     def parse_xml_for_bouquets(self, xml):
 
         e2service_details = lambda y: y.findAll(['e2servicereference', 'e2servicename'])
@@ -95,8 +77,6 @@ class NowNextMonitor(cherrypy.process.plugins.Monitor):
         channel_xml = BeautifulSoup(self.old_channels[bouquet])
         channels = [(a[0].text, a[1].text) for a in [e2service_details(x) for x in e2service(channel_xml)]]
         return channels
-
-
 
     def get_channels_from_service(self, host, web, sRef=None, show_epg=False):
 

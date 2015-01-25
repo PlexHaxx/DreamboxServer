@@ -6,6 +6,7 @@ from cherrypy.process import wspbus, plugins
 import sqlite3
 import json
 import time
+from Plugins.PluginBase import PluginBase
 
 
 b_sql = """ CREATE TABLE IF NOT EXISTS
@@ -34,6 +35,8 @@ epg_sql = """CREATE  TABLE IF NOT EXISTS "main"."epg"
               "epg_event_description_extended" TEXT,
               "epg_event_service_ref" INTEGER NOT NULL ,
               "epg_event_deleted" INTEGER NOT NULL  DEFAULT 0)"""
+
+
 class MessageResponse(object):
     """
     Class to be used to pass data along the bus in response to a particular publish
@@ -54,13 +57,13 @@ class MessageResponse(object):
 
 MessageRequest = namedtuple('MessageRequest', 'script, action, data')
 
-class DBHandler(SimplePlugin):
+class DBHandler(PluginBase):
 
     DATABASE_NAME = 'dreamboxserver.sqlite'
 
     def __init__(self, bus):
 
-        super(DBHandler, self).__init__(bus)
+        super(DBHandler, self).__init__(bus, name='db_handler')
 
         sqldb = sqlite3.connect(DBHandler.DATABASE_NAME, timeout=10)
         cursor = sqldb.cursor()
@@ -72,38 +75,17 @@ class DBHandler(SimplePlugin):
         sqldb.close()
         # A queue to store any responses we may want
         self.response_queue = PriorityQueue()
+        # Add our callbacks
+        self.action_dict.update ({'bouquet_update': DBHandler.bouquet_update,
+                                  'get_bouquets': DBHandler.get_bouquets,
+                                  'get_channels': DBHandler.get_bouquet_channels,
+                                  'get_all_channels': DBHandler.get_all_channels,
+                                  'epg_update': DBHandler.epg_update,
+                                  'epg_now_next': DBHandler.epg_now_next,
+                                  'update_now_next': DBHandler.update_now_next})
 
     def start(self):
         self.bus.log('Waiting for db stuff')
-        self.bus.subscribe('db_handler', self.dispatch)
-
-    def dispatch(self, message):
-        """
-        Dispatcher to handle the message. A request will be handled by the if statements, routing the
-        correct message to the correct function
-        An unknown action will
-        :param message:
-        :return:
-        """
-        if isinstance(message, tuple):
-            if message.action == 'bouquet_update':
-                self.bouquet_update(message)
-            if message.action == 'get_bouquets':
-                self.get_bouquets(message)
-            if message.action == 'get_channels':
-                self.get_bouquet_channels(message)
-            if message.action == 'get_all_channels':
-                self.get_all_channels(message)
-            if message.action == 'epg_update':
-                self. epg_update(message)
-            if message.action == 'epg_now_next':
-                self.epg_now_next(message)
-            if message.action == 'update_now_next':
-                self.update_now_next(message)
-        else:
-            self.response_queue.put(message)
-
-
 
     def stop(self):
         self.bus.log('Cant be arsed anymore')

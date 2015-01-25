@@ -4,9 +4,10 @@ from mako.template import Template
 from mako.lookup import TemplateLookup
 import cherrypy
 import os
+from Plugins.PluginBase import PluginBase, MessageRequest
 
 
-MessageRequest = namedtuple('MessageRequest', 'script, action, data', verbose=False)
+
 
 class API():
 
@@ -17,11 +18,7 @@ class API():
     def dispatch(self, message):
 
         if isinstance(message, tuple):
-
-            if message.action == 'get_bouquets':
-                pass
-            if message.action == 'get_channels':
-                pass
+            pass
         else:
             # we are waiting  for something
             self.q.put(message)

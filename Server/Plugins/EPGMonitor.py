@@ -14,7 +14,6 @@ class EPGMonitor(PluginBase):
 
 
     def __init__(self, bus):
-
         super(EPGMonitor, self).__init__(bus, name='epg_monitor',  callback=None, frequency=3600)
         self.host = '192.168.1.252'
         self.port = 80
@@ -22,13 +21,13 @@ class EPGMonitor(PluginBase):
 
     def monitor(self):
         self.bus.log('in thread epg monitor')
-        db_channels = self.get_channels_from_db(self.host, self.port)
+        db_channels = self.get_channels_from_db()
 
         epg = self.get_epg_for_all_channels(self.host, self.port, db_channels)
         events = self.parse_xml_for_epg(epg)
         cherrypy.engine.publish('db_handler', MessageRequest('epg_monitor', 'epg_update', events))
 
-    def get_channels_from_db(self, host, port):
+    def get_channels_from_db(self):
 
         cherrypy.engine.publish('db_handler', MessageRequest('epg_monitor', 'get_all_channels', None))
         for i in xrange(1, 100, 1):

@@ -46,6 +46,14 @@ class API():
             return resp.data if resp.action == 'get_channels' else self.q.put(resp)
         return None
 
+    @cherrypy.expose
+    def get_channel_now_next(self, channel_id):
+        #todo validate sref
+        cherrypy.engine.publish('db_handler', MessageRequest('api', 'get_channel_now_next', channel_id))
+        for i in xrange(1, 100, 1):
+            resp = self.q.get()
+            return resp.data if resp.action == 'get_channel_now_next' else self.q.put(resp)
+        return None
 
 class Feeds():
 

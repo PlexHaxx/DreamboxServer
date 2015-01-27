@@ -82,7 +82,8 @@ class DBHandler(PluginBase):
                                   'get_all_channels': DBHandler.get_all_channels,
                                   'epg_update': DBHandler.epg_update,
                                   'epg_now_next': DBHandler.epg_now_next,
-                                  'update_now_next': DBHandler.update_now_next})
+                                  'update_now_next': DBHandler.update_now_next,
+                                  'get_channel_now_next': DBHandler.get_channel_now_next})
 
     def start(self):
         self.bus.log('Waiting for db stuff')
@@ -173,6 +174,22 @@ class DBHandler(PluginBase):
         data = json.dumps(dict([(row[0], (row[1], row[2])) for row in rows]))
         response = MessageResponse(1, script, action, data)
         cherrypy.engine.publish(script, response)
+
+    def get_channel_now_next(self, data):
+        script, action, data = data
+
+        db = sqlite3.connect(DBHandler.DATABASE_NAME)
+        curs = db.cursor()
+        self.bus.log(data)
+        curs.execute("""SELECT nn_title, nn_description, nn_description_extended, nn_sref  from now_next where nn_ch_id  = ?""", [data])
+        rows = curs.fetchall()
+
+
+
+        response = MessageResponse(1, script, action, json.dumps(rows))
+        cherrypy.engine.publish(script, response)
+        db.close()
+
 
     def epg_now_next(self, data):
         """

@@ -6,16 +6,22 @@
             <legend>Dreambox Server</legend>
             <div class="row" style="margin-bottom: 10px">
                 <div class="col-lg-3">
-                    <label for="dreamboxip"> How often should we update the EPG info</label>
+                    <label for="dbsupdateepgfrequency">EPG Update Frequency (Hours)</label>
                 </div>
                 <div class="col-lg-9">
-                    <input type="text" name="dreamboxip" id="dreamboxip" value="24">
+                    <input type="number" name="dbsupdateepgfrequency" id="dbsupdateepgfrequency" value="24">
                 </div>
                 <div class="col-lg-3">
-                    <label for="dreamboxip"> How often should we check for updates to bouquets</label>
+                    <label for="dbsupdatebouquetfrequency"> Bouquet update Frequency (Hours)</label>
                 </div>
                 <div class="col-lg-9">
-                    <input type="text" name="dreamboxip" id="dreamboxip" value="1">
+                    <input type="number" name="dbsupdatebouquetfrequency" id="dbsupdatebouquetfrequency" value="1">
+                </div>
+                <div class="col-lg-3">
+                    <label for="dbsupdatenownextfrequency">EPG Now Next Update Frequency (Seconds)</label>
+                </div>
+                <div class="col-lg-9">
+                    <input type="number" name="dbsupdatenownextfrequency" id="dbsupdatenownextfrequency" value="20">
                 </div>
             </div>
     </%block>

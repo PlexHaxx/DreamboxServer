@@ -57,14 +57,25 @@ class API():
 
 class Feeds():
 
+    def __init__(self, path, host):
+
+        self.path = path
+        self.host = host
+
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def index(self):
 
-        channels = [('audio1', 'http://localhost:28090/live_audio1.mkv'), ('audio1', 'http://localhost:28090/live_audio2.mkv' )]
+        channels = [('audio1', 'http://{}:{}/live_audio1.mkv'.format(self.path, self.host)), 
+                           ('audio2', 'http://{}:{}/live_audio2.mkv'.format(self.path, self.host))]
         return channels
 
 class Stream():
+
+    def __init__(self, path, host):
+
+        self.path = path
+        self.host = host
 
     @cherrypy.expose
     def audio1(self):
@@ -79,6 +90,7 @@ class Stream():
 
 
 class About():
+
 
     @cherrypy.expose
     def index(self):

@@ -10,7 +10,7 @@ import subprocess
 class FFMPEG(PluginBase):
 
     def __init__(self, bus):
-        super(FFMPEG, self).__init__(bus, name='ffmpeg', frequency=0)
+        super(FFMPEG, self).__init__(bus, name='ffmpeg')
         self.started = False
         self.process = None
         self.action_dict.update({})

@@ -33,8 +33,7 @@ config = {
 
 class Home():
 
-    Feeds = Feeds()
-    Stream = Stream()
+
     Bouquets = Bouquets()
     Dreambox = Dreambox()
     FFMPEG =FFMPEG()
@@ -48,6 +47,10 @@ class Home():
     MediaServer(cherrypy.engine).subscribe()
     NowNextMonitor(cherrypy.engine).subscribe()
     API = API()
+
+    def __init__(self):
+        Home.Feeds = Feeds(path='192.168.1.100', host=80)
+        Home.Stream = Stream(path='192.168.1.100', host=80)
 
 
 

@@ -17,7 +17,7 @@ class FFMPEG(PluginBase):
 
     def start(self):
         self.bus.log('Starting ffmpeg')
-        self.startFFMPEG)
+        self.startFFMPEG()
 
     def startFFMPEG(self):
         cherrypy.log('sd')

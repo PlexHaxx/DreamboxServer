@@ -1,12 +1,16 @@
 from Queue import PriorityQueue
 from collections import namedtuple
+import itertools
 from mako.template import Template
 from mako.lookup import TemplateLookup
 import cherrypy
 import os
-from Plugins.PluginBase import PluginBase, MessageRequest
+import operator
+from Plugins.Transcoder import Transcoder
+import time
 
 
+MessageRequest = namedtuple('MessageRequest', 'script, action, data', verbose=False)
 
 
 class API():
@@ -76,11 +80,32 @@ class Stream():
 
         self.path = path
         self.host = host
+        self.q = PriorityQueue()
+        cherrypy.engine.subscribe('stream', self.dispatch)
+
+    def dispatch(self, message):
+
+        if isinstance(message, tuple):
+            pass
+        else:
+            # we are waiting  for something
+            self.q.put(message)
 
     @cherrypy.expose
     def audio1(self):
+        #todo need to publish methods here to stop, then start so we dont return straight away
+        cherrypy.engine.publish('transcoder', MessageRequest('stream', 'start_transcoder', '1'))
+        for i in xrange(1, 100, 1):
+            cherrypy.log('waiting for response response')
+            resp = self.q.get()
+            cherrypy.log('got response')
+            if resp.action == 'start_transcoder' :
+                raise cherrypy.HTTPRedirect('http://localhost:28090/live_audio1.mkv')
+            else:
+                self.q.put(resp)
+        return None
 
-        raise cherrypy.HTTPRedirect('http://localhost:28090/live_audio1.mkv')
+
 
     @cherrypy.expose
     def audio2(self):
@@ -99,56 +124,71 @@ class About():
         index = Template (filename=os.path.abspath('.') + '/html/about.html', lookup=mylookup)
         return index.render()
 
-class Bouquets():
+class Player():
 
     @cherrypy.expose
     def index(self):
         #todo Some subscribe call here and elsewhere to put message on bus we have selected something and call appropriate plugin
         mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
-        index = Template (filename=os.path.abspath('.') + '/html/bouquets.html', lookup=mylookup)
+        index = Template (filename=os.path.abspath('.') + '/html/player.html', lookup=mylookup)
         return index.render()
 
 class Dreambox():
+
+    def __init__(self, params):
+        self.params = dict((k, v) for item in params for (k, v) in item.iteritems())
 
     @cherrypy.expose
     def index(self):
         #todo Some subscribe call here and elsewhere to put message on bus we have selected something and call appropriate plugin
         mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
         index = Template (filename=os.path.abspath('.') + '/html/dreambox.html', lookup=mylookup)
-        return index.render()
+        return index.render(**self.params)
 
 class FFMPEG():
+
+    def __init__(self, params):
+        self.params = dict((k, v) for item in params for (k, v) in item.iteritems())
 
     @cherrypy.expose
     def index(self):
         #todo Some subscribe call here and elsewhere to put message on bus we have selected something and call appropriate plugin
         mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
         index = Template (filename=os.path.abspath('.') + '/html/ffmpeg.html', lookup=mylookup)
-        return index.render()
+        return index.render(**self.params)
 
 class FFServer():
+
+    def __init__(self, params):
+        self.params = dict((k, v) for item in params for (k, v) in item.iteritems())
 
     @cherrypy.expose
     def index(self):
         #todo Some subscribe call here and elsewhere to put message on bus we have selected something and call appropriate plugin
         mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
         index = Template (filename=os.path.abspath('.') + '/html/ffserver.html', lookup=mylookup)
-        return index.render()
+        return index.render(**self.params)
 
 class Plex():
+
+    def __init__(self, params):
+        self.params = dict((k, v) for item in params for (k, v) in item.iteritems())
 
     @cherrypy.expose
     def index(self):
         #todo Some subscribe call here and elsewhere to put message on bus we have selected something and call appropriate plugin
         mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
         index = Template (filename=os.path.abspath('.') + '/html/plex.html', lookup=mylookup)
-        return index.render()
+        return index.render(**self.params)
 
 class DreamboxServer():
+
+    def __init__(self, params):
+        self.params = dict((k, v) for item in params for (k, v) in item.iteritems())
 
     @cherrypy.expose
     def index(self):
         #todo Some subscribe call here and elsewhere to put message on bus we have selected something and call appropriate plugin
         mylookup = TemplateLookup(directories=[os.path.abspath('.') + '/html'])
         index = Template (filename=os.path.abspath('.') + '/html/dreamboxserver.html', lookup=mylookup)
-        return index.render()
+        return index.render(**self.params)

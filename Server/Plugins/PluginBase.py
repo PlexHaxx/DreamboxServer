@@ -36,6 +36,7 @@ class PluginBase(cherrypy.process.plugins.Monitor):
 
         try:
             if message is not None:
+                self.bus.log('DB Handler received a message {}'. format(message.action))
                 self.action(self.action_dict[message.action], self, message)
         except KeyError:
             self.q.put(message)

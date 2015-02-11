@@ -48,6 +48,8 @@ class MediaServer(PluginBase):
         self.bus.unsubscribe('ffserver', self.dispatch)
         if self.process is not None:
             self.process.kill()
+            self.process = None
+            #todo Also delete the ffm files in the specified dir
 
     def get_ffsever_stat_page(self, host, web):
         buffer = StringIO()

@@ -27,6 +27,7 @@
     <script src="http://code.highcharts.com/highcharts.js"></script>
     <script src="http://code.highcharts.com/highcharts-more.js"></script>
     <script src="http://code.highcharts.com/modules/exporting.js"></script>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
   </head>
 
   <body>
@@ -64,7 +65,7 @@
                         <a href="/">Home</a>
                     </li>
                     <li>
-                        <a href="/Bouquets">Bouquets</a>
+                        <a href="/Player">Player</a>
                     </li>
                     <li>
                         <a href="/Dreambox">Dreambox</a>
@@ -91,6 +92,22 @@
     </div>
     <!-- /#wrapper -->
         <script>
+            $(document).ready(function(){
+                $('.config_value').focusout(function(data){
+                    var d = data
+                    $.ajax({
+                        url: '../update_config',
+                        data: { 'key': data.currentTarget.id,
+                                'value': data.currentTarget.value},
+                        success: function (data) {
+                            if (data.result ==  true) {
+                                $('#' + d.currentTarget.id + '_status').addClass('fa fa-check-square')
+                            }
+
+                        },
+                    })
+                });
+            });
 
         </script>
 

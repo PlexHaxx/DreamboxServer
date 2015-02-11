@@ -7,6 +7,7 @@ import sqlite3
 import json
 import time
 from Plugins.PluginBase import PluginBase
+from collections import defaultdict
 
 
 b_sql = """ CREATE TABLE IF NOT EXISTS
@@ -83,7 +84,10 @@ class DBHandler(PluginBase):
                                   'epg_update': DBHandler.epg_update,
                                   'epg_now_next': DBHandler.epg_now_next,
                                   'update_now_next': DBHandler.update_now_next,
-                                  'get_channel_now_next': DBHandler.get_channel_now_next})
+                                  'get_channel_now_next': DBHandler.get_channel_now_next,
+                                  'get_db_host': DBHandler.get_param,
+                                  'get_params': DBHandler.get_params,
+                                  'update_param': DBHandler.update_param})
 
     def start(self):
         self.bus.log('Waiting for db stuff')
@@ -260,6 +264,60 @@ class DBHandler(PluginBase):
 
         data = json.dumps(dict([(row[0], row[1]) for row in rows]))
         response = MessageResponse(priority=2, script=script, action=action, data=data)
+
+        cherrypy.engine.publish(script, response)
+
+    def get_param(self, request):
+        """
+        Gets the value of the given parameter
+        :param data:
+        :return:
+        """
+        script, action, data = request
+
+        db = sqlite3.connect(DBHandler.DATABASE_NAME)
+        curs = db.cursor()
+        curs.execute("""SELECT co_value from config where co_key = ?""", [data])
+        rows  = curs.fetchall()
+
+        data = json.dumps(dict([(data, row[0]) for row in rows]))
+        response = MessageResponse(priority=2, script=script, action=action, data=data)
+
+        cherrypy.engine.publish(script, response)
+
+    def get_params(self, request):
+        """
+        Gets the value of the given parameter
+        :param data:
+        :return:
+        """
+        script, action, data = request
+
+        db = sqlite3.connect(DBHandler.DATABASE_NAME)
+        curs = db.cursor()
+        curs.execute("""SELECT co_page, co_key, co_value from config""")
+        rows  = curs.fetchall()
+
+        data = defaultdict(list)
+        [data[row[0]].append({row[1]: row[2]}) for row in rows]
+        response = MessageResponse(priority=2, script=script, action=action, data=data)
+        cherrypy.engine.publish(script, response)
+
+    def update_param(self, request):
+        """
+        Gets the value of the given parameter
+        :param data:
+        :return:
+        """
+        script, action, data = request
+
+        db = sqlite3.connect(DBHandler.DATABASE_NAME)
+        curs = db.cursor()
+        curs.execute("""update config set co_value = ? where co_key = ?""", [data[1], data[0]])
+        res = db.commit()
+        data = True if res is None else False
+
+        response = MessageResponse(priority=1, script=script, action=action, data=data)
 
         cherrypy.engine.publish(script, response)
 

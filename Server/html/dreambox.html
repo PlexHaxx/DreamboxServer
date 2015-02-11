@@ -5,80 +5,82 @@
 
         <div class="col-sm-12" style="padding-top: 20px">
             <legend>Dreambox</legend>
+            <p>
+                Settings to enable Dreambox Server to connect to your dreambox. <br>
+                Values are automatically saved when you
+                exit the setting you have just updated.
+            </p>
             <div class="row" style="margin-bottom: 10px">
                 <div class="col-lg-3">
-                    <label for="dreamboxip">Host</label>
+                    <label for="db_host">Host</label>
                 </div>
-                <div class="col-lg-9">
-                    <input type="text" name="dreamboxip" id="dreamboxip">
+                <div class="col-lg-3">
+                    <input class="config_value pull-right"  type="text" name="db_host" id="db_host" value="${db_host}">
                 </div>
+                <div class="col-lg-1" id="db_host_status"></div>
             </div>
             <div class="row" style="margin-bottom: 10px">
                 <div class="col-lg-3">
-                    <label for="dreamboxip">Web Interface Port</label>
+                    <label for="db_port">Web Interface Port</label>
                 </div>
-                <div class="col-lg-9">
-                    <input type="number" name="dreamboxip" id="dreamboxip" value="80">
+                <div class="col-lg-3">
+                    <input class="config_value pull-right"  type="number" name="db_port" id="db_port" value="${db_port}">
                 </div>
+                <div class="col-lg-1" id="db_port_status"></div>
             </div>
             <div class="row" style="margin-bottom: 10px">
                 <div class="col-lg-3">
-                    <label for="dreamboxip">WebIF secure login</label>
+                    <label for="db_secure_login">WebIF secure login</label>
                 </div>
-                <div class="col-lg-9">
-                    <input type="checkbox" name="dreamboxip" id="dreamboxip">
+                <div class="col-lg-3">
+                    <input class="config_value col-lg-6 pull-right"  type="checkbox" name="db_secure_login" id="db_secure_login" checked="${db_secure_login}">
                 </div>
+                <div class="col-lg-1" id="db_secure_login_status"></div>
             </div>
             <div class="row" style="margin-bottom: 10px">
                 <div class="col-lg-3">
-                    <label for="dreamboxip">Streaming Video Port</label>
+                    <label for="db_streaming_port">Streaming Video Port</label>
                 </div>
-                <div class="col-lg-9">
-                    <input type="number" name="dreamboxip" id="dreamboxip" value="8001">
+                <div class="col-lg-3">
+                    <input class="config_value pull-right"  type="number" name="db_streaming_port" id="db_streaming_port" value="${db_streaming_port}">
                 </div>
+                <div class="col-lg-1" id="db_streaming_port_status"></div>
             </div>
             <div class="row" style="margin-bottom: 10px">
                 <div class="col-lg-3">
-                    <label for="dreamboxip">Path to Load Picons</label>
+                    <label for="db_picon_path">Path to Load Picons</label>
                 </div>
-                <div class="col-lg-9">
-                    <input type="text" name="dreamboxip" id="dreamboxip">
+                <div class="col-lg-3">
+                    <input class="config_value pull-right"  type="text" name="db_picon_path" id="db_picon_path" value="${db_picon_path}">
                 </div>
+                <div class="col-lg-1" id="db_picon_path_status"></div>
             </div>
             <div class="row" style="margin-bottom: 10px">
                 <div class="col-lg-3">
-                    <label for="dreamboxip">Path to Movie Folder</label>
+                    <label for="db_movie_path">Path to Movie Folder</label>
                 </div>
-                <div class="col-lg-9">
-                    <input type="text" name="dreamboxip" id="dreamboxip">
+                <div class="col-lg-3">
+                    <input class="config_value pull-right"  type="text" name="db_movie_path" id="db_movie_path" value="${db_movie_path}">
                 </div>
+                <div class="col-lg-1" id="db_movie_path_status"></div>
             </div>
             <div class="row" style="margin-bottom: 10px">
                 <div class="col-lg-3">
-                    <label for="dreamboxip">FTP Port</label>
+                    <label for="db_username">Username</label>
                 </div>
-                <div class="col-lg-9">
-                    <input type="number" name="dreamboxip" id="dreamboxip" value="21">
+                <div class="col-lg-3">
+                    <input class="config_value pull-right"  type="text" name="db_username" id="db_username" value="${db_username}">
                 </div>
+                <div class="col-lg-1" id="db_username_status"></div>
             </div>
             <div class="row" style="margin-bottom: 10px">
                 <div class="col-lg-3">
-                    <label for="dreamboxip">Username</label>
+                    <label for="db_password">Password</label>
                 </div>
-                <div class="col-lg-9">
-                    <input type="text" name="dreamboxip" id="dreamboxip">
-                </div>
-            </div>
-            <div class="row" style="margin-bottom: 10px">
                 <div class="col-lg-3">
-                    <label for="dreamboxip">Password</label>
+                    <input class="config_value pull-right" type="password" name="db_password" id="db_password" value="${db_password}">
                 </div>
-                <div class="col-lg-9">
-                    <input type="password" name="dreamboxip" id="dreamboxip">
-                </div>
+                <div class="col-lg-1" id="db_password_status"></div>
             </div>
-
-
-
         </div>
     </%block>
